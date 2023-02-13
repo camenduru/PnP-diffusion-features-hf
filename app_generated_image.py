@@ -112,7 +112,8 @@ def run_pnp_command(
 def create_prompt_demo() -> gr.Blocks:
     with gr.Blocks() as demo:
         with gr.Box():
-            gr.Markdown('Step 1')
+            gr.Markdown(
+                'Step 1 (This step will take about 1.5 minutes on A10G.)')
             with gr.Row():
                 with gr.Column():
                     source_prompt = gr.Text(label='Source prompt')
@@ -140,7 +141,8 @@ def create_prompt_demo() -> gr.Blocks:
                                                type='filepath')
                     exp_name = gr.Variable()
         with gr.Box():
-            gr.Markdown('Step 2')
+            gr.Markdown(
+                'Step 2 (This step will take about 1.5 minutes on A10G.)')
             with gr.Row():
                 with gr.Column():
                     translation_prompt = gr.Text(

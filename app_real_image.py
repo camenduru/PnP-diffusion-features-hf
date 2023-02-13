@@ -92,7 +92,8 @@ def run_pnp_command(
 def create_real_image_demo():
     with gr.Blocks() as demo:
         with gr.Box():
-            gr.Markdown('Step 1')
+            gr.Markdown(
+                'Step 1 (This step will take about 5 minutes on A10G.)')
             with gr.Row():
                 with gr.Column():
                     image = gr.Image(label='Input image', type='filepath')
@@ -103,7 +104,8 @@ def create_real_image_demo():
                                                    type='filepath')
                     exp_name = gr.Variable()
         with gr.Box():
-            gr.Markdown('Step 2')
+            gr.Markdown(
+                'Step 2 (This step will take about 1.5 minutes on A10G.)')
             with gr.Row():
                 with gr.Column():
                     translation_prompt = gr.Text(
