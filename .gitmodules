@@ -1,0 +1,3 @@
+[submodule "plug-and-play"]
+	path = plug-and-play
+	url = https://github.com/MichalGeyer/plug-and-play
