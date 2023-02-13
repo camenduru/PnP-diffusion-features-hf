@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
 import shlex
 import subprocess
@@ -10,7 +11,11 @@ import tempfile
 import gradio as gr
 from omegaconf import OmegaConf
 
-from utils import get_timestamp
+
+def get_exp_name(path: str) -> str:
+    with open(path, 'rb') as f:
+        res = hashlib.md5(f.read()).hexdigest()
+    return res
 
 
 def gen_feature_extraction_config(exp_name: str, init_image_path: str) -> str:
@@ -25,11 +30,12 @@ def gen_feature_extraction_config(exp_name: str, init_image_path: str) -> str:
 
 
 def run_feature_extraction_command(init_image_path: str) -> tuple[str, str]:
-    exp_name = get_timestamp()
-    config_path = gen_feature_extraction_config(exp_name, init_image_path)
-    subprocess.run(shlex.split(
-        f'python run_features_extraction.py --config {config_path}'),
-                   cwd='plug-and-play')
+    exp_name = get_exp_name(init_image_path)
+    if not pathlib.Path(f'plug-and-play/experiments/{exp_name}').exists():
+        config_path = gen_feature_extraction_config(exp_name, init_image_path)
+        subprocess.run(shlex.split(
+            f'python run_features_extraction.py --config {config_path}'),
+                       cwd='plug-and-play')
     return f'plug-and-play/experiments/{exp_name}/samples/0.png', exp_name
 
 
@@ -89,6 +95,20 @@ def run_pnp_command(
     return out_path.as_posix()
 
 
+def process_example(image: str, translation_prompt: str,
+                    negative_prompt: str) -> tuple[str, str, str]:
+    reconstructed_image, exp_name = run_feature_extraction_command(image)
+    result = run_pnp_command(exp_name,
+                             translation_prompt,
+                             negative_prompt,
+                             guidance_scale=10,
+                             ddim_steps=50,
+                             feature_injection_threshold=40,
+                             negative_prompt_alpha=1,
+                             negative_prompt_schedule='linear')
+    return reconstructed_image, exp_name, result
+
+
 def create_real_image_demo():
     with gr.Blocks() as demo:
         with gr.Box():
@@ -102,7 +122,7 @@ def create_real_image_demo():
                 with gr.Column():
                     reconstructed_image = gr.Image(label='Reconstructed image',
                                                    type='filepath')
-                    exp_name = gr.Variable()
+                    exp_name = gr.Text(visible=False)
         with gr.Box():
             gr.Markdown(
                 'Step 2 (This step will take about 1.5 minutes on A10G.)')
@@ -144,23 +164,37 @@ def create_real_image_demo():
                     result = gr.Image(label='Result', type='filepath')
 
         with gr.Row():
-            gr.Examples(examples=[
-                [
-                    'plug-and-play/data/horse.png',
-                    'a photo of a robot horse',
-                    'a photo of a white horse',
+            gr.Examples(
+                examples=[
+                    [
+                        'plug-and-play/data/horse.png',
+                        'a photo of a robot horse',
+                        'a photo of a white horse',
+                    ],
+                    [
+                        'plug-and-play/data/horse.png',
+                        'a photo of a bronze horse in a museum',
+                        'a photo of a white horse',
+                    ],
+                    [
+                        'plug-and-play/data/horse.png',
+                        'a photo of a pink horse on the beach',
+                        'a photo of a white horse',
+                    ],
                 ],
-                [
-                    'plug-and-play/data/horse.png',
-                    'a photo of a bronze horse in a museum',
-                    'a photo of a white horse',
+                inputs=[
+                    image,
+                    translation_prompt,
+                    negative_prompt,
                 ],
-            ],
-                        inputs=[
-                            image,
-                            translation_prompt,
-                            negative_prompt,
-                        ])
+                outputs=[
+                    reconstructed_image,
+                    exp_name,
+                    result,
+                ],
+                fn=process_example,
+                cache_examples=True,
+            )
 
         extract_feature_button.click(
             fn=run_feature_extraction_command,

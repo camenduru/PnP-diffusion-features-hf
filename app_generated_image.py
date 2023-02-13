@@ -10,8 +10,6 @@ import tempfile
 import gradio as gr
 from omegaconf import OmegaConf
 
-from utils import get_timestamp
-
 
 def gen_feature_extraction_config(
     exp_name: str,
@@ -39,17 +37,18 @@ def run_feature_extraction_command(
     guidance_scale: float,
     ddim_steps: int,
 ) -> tuple[str, str]:
-    exp_name = get_timestamp()
-    config_path = gen_feature_extraction_config(
-        exp_name,
-        prompt,
-        seed,
-        guidance_scale,
-        ddim_steps,
-    )
-    subprocess.run(shlex.split(
-        f'python run_features_extraction.py --config {config_path}'),
-                   cwd='plug-and-play')
+    exp_name = f'{prompt.replace(" ", "_")}_{seed}_{guidance_scale:.1f}_{ddim_steps}'
+    if not pathlib.Path(f'plug-and-play/experiments/{exp_name}').exists():
+        config_path = gen_feature_extraction_config(
+            exp_name,
+            prompt,
+            seed,
+            guidance_scale,
+            ddim_steps,
+        )
+        subprocess.run(shlex.split(
+            f'python run_features_extraction.py --config {config_path}'),
+                       cwd='plug-and-play')
     return f'plug-and-play/experiments/{exp_name}/samples/0.png', exp_name
 
 
@@ -109,6 +108,21 @@ def run_pnp_command(
     return out_path.as_posix()
 
 
+def process_example(source_prompt: str, seed: int,
+                    translation_prompt: str) -> tuple[str, str, str]:
+    generated_image, exp_name = run_feature_extraction_command(
+        source_prompt, seed, guidance_scale=5, ddim_steps=50)
+    result = run_pnp_command(exp_name,
+                             translation_prompt,
+                             negative_prompt='',
+                             guidance_scale=7.5,
+                             ddim_steps=50,
+                             feature_injection_threshold=40,
+                             negative_prompt_alpha=0.75,
+                             negative_prompt_schedule='linear')
+    return generated_image, exp_name, result
+
+
 def create_prompt_demo() -> gr.Blocks:
     with gr.Blocks() as demo:
         with gr.Box():
@@ -139,7 +153,7 @@ def create_prompt_demo() -> gr.Blocks:
                 with gr.Column():
                     generated_image = gr.Image(label='Generated image',
                                                type='filepath')
-                    exp_name = gr.Variable()
+                    exp_name = gr.Text(visible=False)
         with gr.Box():
             gr.Markdown(
                 'Step 2 (This step will take about 1.5 minutes on A10G.)')
@@ -180,15 +194,24 @@ def create_prompt_demo() -> gr.Blocks:
                 with gr.Column():
                     result = gr.Image(label='Result', type='filepath')
         with gr.Row():
-            gr.Examples(examples=[
-                ['horse in mud', 50, 'a photo of a zebra in the snow'],
-                ['horse in mud', 50, 'a photo of a husky in the grass'],
-            ],
-                        inputs=[
-                            source_prompt,
-                            seed,
-                            translation_prompt,
-                        ])
+            gr.Examples(
+                examples=[
+                    ['horse in mud', 50, 'a photo of a zebra in the snow'],
+                    ['horse in mud', 50, 'a photo of a husky in the grass'],
+                ],
+                inputs=[
+                    source_prompt,
+                    seed,
+                    translation_prompt,
+                ],
+                outputs=[
+                    generated_image,
+                    exp_name,
+                    result,
+                ],
+                fn=process_example,
+                cache_examples=True,
+            )
 
         extract_feature_button.click(
             fn=run_feature_extraction_command,
