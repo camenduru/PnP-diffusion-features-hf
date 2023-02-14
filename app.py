@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import shlex
 import subprocess
@@ -14,6 +15,13 @@ from app_real_image import create_real_image_demo
 DESCRIPTION = '''# Plug-and-Play diffusion features
 
 This is an unofficial demo for [https://github.com/MichalGeyer/plug-and-play](https://github.com/MichalGeyer/plug-and-play).
+'''
+
+if (SPACE_ID := os.getenv('SPACE_ID')) is not None:
+    DESCRIPTION += f'''<p>For faster inference without waiting in queue, you may duplicate the space and upgrade to GPU in settings.<br/>
+<a href="https://huggingface.co/spaces/{SPACE_ID}?duplicate=true">
+<img style="margin-top: 0em; margin-bottom: 0em" src="https://bit.ly/3gLdBN6" alt="Duplicate Space"></a>
+<p/>
 '''
 
 weight_dir = pathlib.Path('plug-and-play/models/ldm/stable-diffusion-v1')
