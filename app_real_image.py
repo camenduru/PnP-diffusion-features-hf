@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import pathlib
 import shlex
 import subprocess
@@ -193,7 +194,7 @@ def create_real_image_demo():
                     result,
                 ],
                 fn=process_example,
-                cache_examples=True,
+                cache_examples=os.getenv('CACHE_EXAMPLES'),
             )
 
         extract_feature_button.click(
