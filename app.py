@@ -17,9 +17,10 @@ DESCRIPTION = '# [Plug-and-Play diffusion features](https://github.com/MichalGey
 
 if (SPACE_ID := os.getenv('SPACE_ID')) is not None:
     DESCRIPTION += f'\n<p>For faster inference without waiting in queue, you may duplicate the space and upgrade to GPU in settings. <a href="https://huggingface.co/spaces/{SPACE_ID}?duplicate=true"><img style="display: inline; margin-top: 0em; margin-bottom: 0em" src="https://bit.ly/3gLdBN6" alt="Duplicate Space" /></a></p>'
+if not torch.cuda.is_available():
+    DESCRIPTION += '\n<p>Running on CPU 🥶 This demo does not work on CPU.</p>'
 
 if torch.cuda.is_available():
-    DESCRIPTION += '\n<p>Running on GPU 🔥</p>'
     weight_dir = pathlib.Path('plug-and-play/models/ldm/stable-diffusion-v1')
     if not weight_dir.exists():
         subprocess.run(
@@ -29,8 +30,6 @@ if torch.cuda.is_available():
             shlex.split(
                 'wget https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt -O plug-and-play/models/ldm/stable-diffusion-v1/model.ckpt'
             ))
-else:
-    DESCRIPTION += '\n<p>Running on CPU 🥶 This demo does not work on CPU.'
 
 with gr.Blocks(css='style.css') as demo:
     gr.Markdown(DESCRIPTION)
