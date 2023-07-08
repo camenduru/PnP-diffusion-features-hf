@@ -38,4 +38,4 @@ with gr.Blocks(css='style.css') as demo:
             create_real_image_demo()
         with gr.TabItem('Use prompt as input'):
             create_prompt_demo()
-demo.queue(api_open=False, max_size=10).launch()
+demo.queue(max_size=10).launch()
